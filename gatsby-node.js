@@ -70,7 +70,7 @@ async function downloadBlobFile(createNode, createNodeId, blobServiceClient, con
 
     createFileNode(localPath, createNodeId, pluginOptions = {
       name: "gatsby-source-azure-storage"
-    }).then(function (node) {      
+    }).then(function (node) {
       let nodeWithUrl = Object.assign({ url: blockBlobClient.url }, node)
       createNode(nodeWithUrl)
     }, function (failure) {
@@ -203,11 +203,15 @@ exports.sourceNodes = (
   // Gatsby adds a configOption that's not needed for this plugin, delete it
   delete configOptions.plugins
 
-  let tableService = azure.createTableService()
-  const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
-  const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+  const connStr = process.env.AZURE_STORAGE_CONNECTION_STRING;
+  const blobServiceClient = BlobServiceClient.fromConnectionString(connStr)
 
   let hasTables = configOptions.tables != null && configOptions.tables.length > 0
+
+  if (hasTables) {
+    const tableService = azure.createTableService(connStr)
+  }
+
   let tablePromises = hasTables
     ? configOptions.tables.map(x => {
       let typeName = (x.type || x.name)
