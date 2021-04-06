@@ -202,16 +202,15 @@ exports.sourceNodes = (
 
   // Gatsby adds a configOption that's not needed for this plugin, delete it
   delete configOptions.plugins
-
-  const connStr = process.env.AZURE_STORAGE_CONNECTION_STRING;
-  const blobServiceClient = BlobServiceClient.fromConnectionString(connStr)
+  
+  const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
 
   let hasTables = configOptions.tables != null && configOptions.tables.length > 0
 
-  if (hasTables) {
-    const tableService = azure.createTableService(connStr)
+  if(hasTables) {
+    const tableService = azure.createTableService()
   }
-
+  
   let tablePromises = hasTables
     ? configOptions.tables.map(x => {
       let typeName = (x.type || x.name)
