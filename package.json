@@ -20,8 +20,7 @@
   "author": "Daniel Oliver <danieloliversoftware@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "@azure/storage-blob": "^12.17.0",
-    "azure-storage": "^2.10.0",
+    "@azure/storage-blob": "^12.17.0",    
     "gatsby-source-filesystem": "^5.13.1",
     "mkdirp": "^3.0.1"
   },
