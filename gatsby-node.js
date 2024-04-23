@@ -1,5 +1,4 @@
 const crypto = require("crypto");
-var azure = require('azure-storage');
 const { BlobServiceClient } = require('@azure/storage-blob');
 var path = require('path');
 var mkdirp = require('mkdirp');
