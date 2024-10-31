@@ -9,31 +9,6 @@ var { createFileNode } = require('gatsby-source-filesystem/create-file-node');
 const getValueWithDefault = (valueItem, defaultValue) => { return ((valueItem || { _: defaultValue })._ || defaultValue) }
 const getValue = valueItem => getValueWithDefault(valueItem, null)
 
-
-function makeTableNode(createNode, createNodeId, tableName, tableType) {
-  const item = {
-    name: tableName,
-    type: tableType
-  }
-  const nodeId = createNodeId('azureTable/' + tableName)
-  const nodeContent = JSON.stringify(item)
-  const nodeContentDigest = crypto
-    .createHash('md5')
-    .update(nodeContent)
-    .digest('hex')
-  const nodeData = Object.assign(item, {
-    id: nodeId,
-    parent: null,
-    children: [],
-    internal: {
-      type: 'azureTable',
-      content: nodeContent,
-      contentDigest: nodeContentDigest,
-    },
-  })
-  createNode(nodeData)
-}
-
 function makeContainerNode(createNode, createNodeId, containerName, localFolder) {
   const item = {
     name: containerName,
@@ -96,55 +71,6 @@ async function streamToLocalFile(readableStream, destination) {
   });
 }
 
-function makeNodesFromQuery(createNode, createNodeId, tableService, tableName, typeName) {
-  return new Promise(function (resolve, reject) {
-    try {
-      const query = new azure.TableQuery()
-
-      function queryWithToken(token) {
-        tableService.queryEntities(tableName, query, token, function (error, result, response) {
-          if (!error) {
-            result.entries.forEach(value => {
-              const item = Object.entries(value).reduce((o, prop) => ({ ...o, [prop[0]]: getValue(prop[1]) }), {})
-              const nodeId = createNodeId(`${item.PartitionKey}/${item.RowKey}`)
-              const nodeContent = JSON.stringify(item)
-              const nodeContentDigest = crypto
-                .createHash('md5')
-                .update(nodeContent)
-                .digest('hex')
-              const nodeData = Object.assign(item, {
-                id: nodeId,
-                parent: null,
-                children: [],
-                internal: {
-                  type: typeName,
-                  content: nodeContent,
-                  contentDigest: nodeContentDigest,
-                },
-              })
-              createNode(nodeData)
-            })
-
-            if (result.continuationToken == null) {
-              resolve()
-            } else {
-              queryWithToken(result.continuationToken)
-            }
-          } else {
-            console.error(` Unable to query table "${tableName}"`)
-            reject(error)
-          }
-        })
-      }
-
-      queryWithToken(null)
-    } catch (err) {
-      console.error(` Error on table "${tableName}"`)
-      reject(err)
-    }
-  })
-}
-
 async function makeNodesFromContainer(createNode, createNodeId, containerClient, containerName, downloadFolder) {
   try {
     var nodes = [];
@@ -194,7 +120,7 @@ async function makeNodesFromContainer(createNode, createNodeId, containerClient,
   return nodes;
 }
 
-exports.sourceNodes = (
+exports.sourceNodes = async (
   { actions, createNodeId },
   configOptions
 ) => {
@@ -205,22 +131,8 @@ exports.sourceNodes = (
   
   const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
 
-  let hasTables = configOptions.tables != null && configOptions.tables.length > 0
-
-  if(hasTables) {
-    const tableService = azure.createTableService()
-  }
-  
-  let tablePromises = hasTables
-    ? configOptions.tables.map(x => {
-      let typeName = (x.type || x.name)
-      makeTableNode(createNode, createNodeId, x.name, typeName)
-      return makeNodesFromQuery(createNode, createNodeId, tableService, x.name, typeName)
-    })
-    : []
-
   let blobPromises = (configOptions.containers != null && configOptions.containers.length > 0)
-    ? configOptions.containers.map(x => {
+    ? configOptions.containers.map(async (x) => {
       let localFolder = (x.localFolder || configOptions.containerLocalFolder)
       makeContainerNode(createNode, createNodeId, x.name, localFolder)
 
@@ -232,13 +144,13 @@ exports.sourceNodes = (
       } else {
         return promiseNode
           .then(values => {
-            return Promise.all(values.map(node => {
-              return downloadBlobFile(createNode, createNodeId, blobServiceClient, containerClient, node)
+            return Promise.all(values.map(async (node) => {
+              await downloadBlobFile(createNode, createNodeId, blobServiceClient, containerClient, node)
             }))
           })
       }
     })
     : []
 
-  return Promise.all(tablePromises.concat(blobPromises))
+  return await Promise.all(blobPromises)
 }
