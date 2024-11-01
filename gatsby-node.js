@@ -3,7 +3,6 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 var azure = require('azure-storage');
 var path = require('path');
 var mkdirp = require('mkdirp');
-const fs = require('fs');
 var { createFileNode } = require('gatsby-source-filesystem/create-file-node');
 
 const getValueWithDefault = (valueItem, defaultValue) => { return ((valueItem || { _: defaultValue })._ || defaultValue) }
@@ -33,8 +32,15 @@ function makeContainerNode(createNode, createNodeId, containerName, localFolder)
   createNode(nodeData)
 }
 
-async function downloadBlobFile(createNode, createNodeId, blobServiceClient, containerClient, { container, name, localPath }) {
+function downloadBlobFile(createNode, createNodeId, blobService, { container, name, localPath }) {
   mkdirp.sync(path.dirname(localPath, createNodeId));
+  return new Promise(function (resolve, reject) {
+    try {
+      blobService.getBlobToLocalFile(container, name, localPath, function (error, result, response) {
+        if (!error) {
+          createFileNode(localPath, createNodeId, pluginOptions = {
+            name: "gatsby-source-azure-storage"
+          }).then(function (node) {
 
   try {
     let blockBlobClient = containerClient.getBlockBlobClient(name);
@@ -59,18 +65,21 @@ async function downloadBlobFile(createNode, createNodeId, blobServiceClient, con
   }
 }
 
-async function streamToLocalFile(readableStream, destination) {
-  return new Promise((resolve, reject) => {
-    let buffer = Buffer.from([]);
-    readableStream.on("data", (data) => {
-      buffer = Buffer.concat([buffer, data], buffer.length + data.length);//Add the data read to the existing buffer.
-    });
-    readableStream.on("end", () => {
-      fs.writeFileSync(destination, buffer);//Write buffer to local file.
-      resolve(destination);//Return that file path.  
-    });
-    readableStream.on("error", reject);
-  });
+              resolve()
+            }, function (failure) {
+              console.error(` Failed creating node from blob "${name}" from container "${container}"`)
+              reject(failure)
+            })
+        } else {
+          console.error(` Failed downloading blob "${name}" from container "${container}"`)
+          reject(error)
+        }
+      })
+    } catch (err) {
+      console.error(` Failed to download blob "${name}" from container "${container}"`)
+      reject(err)
+    }
+  })
 }
 
 async function makeNodesFromContainer(createNode, createNodeId, containerClient, containerName, downloadFolder) {
@@ -111,15 +120,27 @@ async function makeNodesFromContainer(createNode, createNodeId, containerClient,
       })
       createNode(nodeData)
 
-      nodes.push(nodeData)
-      blobItem = await blobs.next();
+              nodes.push(nodeData)
+            })
+
+            if (result.continuationToken == null) {
+              resolve(nodes)
+            } else {
+              queryWithToken(result.continuationToken, nodes)
+            }
+          } else {
+            console.error(` Unable to query container "${tableName}"`)
+            reject(error)
+          }
+        })
+      }
+
+      queryWithToken()
+    } catch (err) {
+      console.error(` Error on container "${containerName}"`)
+      reject(err)
     }
-
-  } catch (err) {
-    console.error(` Error on container "${containerName}"`)
-  }
-
-  return nodes;
+  })
 }
 
 exports.sourceNodes = async (
@@ -129,17 +150,15 @@ exports.sourceNodes = async (
   const { createNode } = actions
 
   // Gatsby adds a configOption that's not needed for this plugin, delete it
-  delete configOptions.plugins
-  
+  delete configOptions.plugins  
   const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
+
 
   let blobPromises = (configOptions.containers != null && configOptions.containers.length > 0)
     ? configOptions.containers.map(async (x) => {
       let localFolder = (x.localFolder || configOptions.containerLocalFolder)
       makeContainerNode(createNode, createNodeId, x.name, localFolder)
-
-      const containerClient = blobServiceClient.getContainerClient(x.name);
-      let promiseNode = makeNodesFromContainer(createNode, createNodeId, containerClient, x.name, localFolder)
+      let promiseNode = makeNodesFromContainer(createNode, createNodeId, blobService, x.name, localFolder)
 
       if (localFolder == null) {
         return promiseNode
@@ -148,6 +167,7 @@ exports.sourceNodes = async (
           .then(values => {
             return Promise.all(values.map(async (node) => {
               await downloadBlobFile(createNode, createNodeId, blobServiceClient, containerClient, node)
+
             }))
           })
       }
