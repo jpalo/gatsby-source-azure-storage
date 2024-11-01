@@ -44,14 +44,14 @@ async function downloadBlobFile(createNode, createNodeId, blobServiceClient, con
     createFileNode(localPath, createNodeId, pluginOptions = {
       name: "gatsby-source-azure-storage"
     })
-    createFileNode(localPath, createNodeId, pluginOptions = {
-      name: "gatsby-source-azure-storage"
-    }).then(function (node) {
-      let nodeWithUrl = Object.assign({ url: blockBlobClient.url }, node)
-      createNode(nodeWithUrl)
-    }, function (failure) {
-      console.error(` Failed creating node from blob "${name}" from container "${container}"`)
-    })
+    //createFileNode(localPath, createNodeId, pluginOptions = {
+    //  name: "gatsby-source-azure-storage"
+    //}).then(function (node) {
+    //  let nodeWithUrl = Object.assign({ url: blockBlobClient.url }, node)
+    //  createNode(nodeWithUrl)
+    //}, function (failure) {
+    //  console.error(` Failed creating node from blob "${name}" from container "${container}"`)
+    //})
 
   } catch (err) {
     console.error(` Failed to download blob "${name}" from container "${container}"`)
