@@ -1,6 +1,6 @@
 {
   "name": "gatsby-source-azure-storage",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Source plugin for pulling data into Gatsby from Azure Storage.",
   "main": "index.js",
   "scripts": {
