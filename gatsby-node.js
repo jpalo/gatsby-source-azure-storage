@@ -131,7 +131,7 @@ exports.sourceNodes = async (
   delete configOptions.plugins
   
   try {
-console.log(process.env.AZURE_STORAGE_CONNECTION_STRING);
+  console.log("-connstr-" + process.env.AZURE_STORAGE_CONNECTION_STRING + "---");
     
   const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
 
