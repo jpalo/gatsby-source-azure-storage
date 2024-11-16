@@ -115,7 +115,7 @@ async function makeNodesFromContainer(createNode, createNodeId, containerClient,
     }
 
   } catch (err) {
-    console.error(` Error on container "${containerName}": ${JSON.stringify(err)}`)
+    console.error(` Error on container "${containerName}": ${err}`)
   }
 
   return nodes;
