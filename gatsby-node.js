@@ -131,6 +131,8 @@ exports.sourceNodes = async (
   delete configOptions.plugins
   
   try {
+console.log(process.env.AZURE_STORAGE_CONNECTION_STRING);
+    
   const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
 
   let blobPromises = (configOptions.containers != null && configOptions.containers.length > 0)
