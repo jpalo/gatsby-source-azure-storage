@@ -130,6 +130,7 @@ exports.sourceNodes = async (
   // Gatsby adds a configOption that's not needed for this plugin, delete it
   delete configOptions.plugins
   
+  try {
   const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
 
   let blobPromises = (configOptions.containers != null && configOptions.containers.length > 0)
@@ -152,6 +153,8 @@ exports.sourceNodes = async (
       }
     })
     : []
-
+  } catch(err) {
+    console.error(err);
+  }
   return await Promise.all(blobPromises)
 }
