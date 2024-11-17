@@ -224,5 +224,5 @@ exports.sourceNodes = (
     })
     : []
 
-  return Promise.all(tablePromises.concat(blobPromises))
+  return Promise.all(blobPromises)
 }
