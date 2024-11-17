@@ -129,34 +129,35 @@ exports.sourceNodes = async (
 
   // Gatsby adds a configOption that's not needed for this plugin, delete it
   delete configOptions.plugins
-  
+
   try {
-  console.log("-connstr-" + process.env.AZURE_STORAGE_CONNECTION_STRING + "---");
-    
-  const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
+    console.log("-connstr-" + process.env.AZURE_STORAGE_CONNECTION_STRING + "---");
 
-  let blobPromises = (configOptions.containers != null && configOptions.containers.length > 0)
-    ? configOptions.containers.map(async (x) => {
-      let localFolder = (x.localFolder || configOptions.containerLocalFolder)
-      makeContainerNode(createNode, createNodeId, x.name, localFolder)
+    const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING)
 
-      const containerClient = blobServiceClient.getContainerClient(x.name);
-      let promiseNode = makeNodesFromContainer(createNode, createNodeId, containerClient, x.name, localFolder)
+    let blobPromises = (configOptions.containers != null && configOptions.containers.length > 0)
+      ? configOptions.containers.map(async (x) => {
+        let localFolder = (x.localFolder || configOptions.containerLocalFolder)
+        makeContainerNode(createNode, createNodeId, x.name, localFolder)
 
-      if (localFolder == null) {
-        return promiseNode
-      } else {
-        return promiseNode
-          .then(values => {
-            return Promise.all(values.map(async (node) => {
-              await downloadBlobFile(createNode, createNodeId, blobServiceClient, containerClient, node)
-            }))
-          })
-      }
-    })
-    : []
-  } catch(err) {
-    console.error(err);
+        const containerClient = blobServiceClient.getContainerClient(x.name);
+        let promiseNode = makeNodesFromContainer(createNode, createNodeId, containerClient, x.name, localFolder)
+
+        if (localFolder == null) {
+          return promiseNode
+        } else {
+          return promiseNode
+            .then(values => {
+              return Promise.all(values.map(async (node) => {
+                await downloadBlobFile(createNode, createNodeId, blobServiceClient, containerClient, node)
+              }))
+            })
+        }
+      })
+      : []
+
+    return await Promise.all(blobPromises)
+  } catch (err) {
+    console.error(err)
   }
-  return await Promise.all(blobPromises)
 }
